@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barangay Connect - CAIS</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --warning: #f59e0b;
+            --accent: #8b5cf6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background: linear-gradient(rgba(30, 41, 59, 0.7), rgba(30, 41, 59, 0.7)), 
+                        url('https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Modals --- */
+        #success-modal, #failed-modal, #announcement-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            max-width: 450px;
+            width: 90%;
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .icon-box { font-size: 50px; margin-bottom: 15px; }
+        .success-icon { color: var(--success); }
+        .failed-icon { color: var(--danger); }
+
+        /* --- Navigation --- */
+        nav {
+            width: 250px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            transition: 0.3s;
+        }
+        nav h2 { font-size: 1.2rem; color: #38bdf8; margin-bottom: 30px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        nav ul { list-style: none; padding: 0; flex-grow: 1; margin: 0; }
+        nav ul li { padding: 12px; cursor: pointer; border-radius: 8px; margin-bottom: 5px; transition: 0.3s; }
+        nav ul li:hover, nav ul li.active { background: var(--primary); }
+        .admin-btn { background: #475569; margin-top: auto; text-align: center; font-weight: bold; }
+
+        /* --- Main Content --- */
+        main { margin-left: 290px; padding: 40px; width: calc(100% - 330px); transition: 0.3s; }
+        .section { 
+            display: none; 
+            background: rgba(255, 255, 255, 0.9); 
+            padding: 25px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            backdrop-filter: blur(5px);
+        }
+        .section.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Forms & UI --- */
+        h1 { color: #1e293b; margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #334155; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; background: rgba(255,255,255,0.8); }
+        button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { transform: scale(1.02); filter: brightness(1.1); }
+
+        /* --- Cards & Tags --- */
+        .data-card { border-left: 5px solid var(--primary); background: white; padding: 15px; margin-top: 15px; border-radius: 8px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: left; }
+        .clickable-card { cursor: pointer; transition: 0.3s; }
+        .clickable-card:hover { transform: translateX(5px); background: #f1f5f9; }
+        .tag { font-size: 0.8rem; padding: 2px 8px; border-radius: 10px; color: white; float: right; text-transform: uppercase; font-weight: bold; }
+        .tag-help { background: var(--danger); }
+        .tag-report { background: var(--warning); }
+        .tag-volunteer { background: var(--success); }
+
+        /* --- Admin Quick Stats --- */
+        .admin-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, filter 0.2s;
+        }
+        .stat-card:hover { transform: scale(1.05); filter: brightness(1.1); }
+        .stat-card.active-filter { outline: 3px solid white; outline-offset: -5px; }
+        .stat-card h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; opacity: 0.9; letter-spacing: 1px; }
+        .stat-card p { margin: 10px 0 0; font-size: 1.8rem; font-weight: bold; }
+        .bg-blue { background: var(--primary); }
+        .bg-green { background: var(--success); }
+        .bg-orange { background: var(--warning); }
+        .bg-purple { background: var(--accent); }
+
+        /* --- Admin Layout --- */
+        #admin-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); z-index: 1000; justify-content: center; align-items: center; }
+        .admin-box { background: white; padding: 40px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; }
+        #admin-panel { 
+            display: none; 
+            background: #f1f5f9; 
+            padding: 30px; 
+            border-radius: 15px; 
+            width: 90%; 
+            max-width: 1000px; 
+            max-height: 85vh;
+            overflow-y: auto;
+            margin: auto; 
+            position: relative; 
+            top: 50%; 
+            transform: translateY(-50%); 
+        }
+        .empty-msg { color: #64748b; font-style: italic; padding: 20px; }
+
+        /* --- MOBILE RESPONSIVE FIX --- */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            nav {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 15px;
+                box-sizing: border-box;
+            }
+            nav h2 { margin-bottom: 15px; text-align: center; border-bottom: none; }
+            nav ul { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+            nav ul li { padding: 8px 12px; font-size: 0.85rem; margin-bottom: 0; flex: 1 1 auto; text-align: center; }
+            .admin-btn { margin-top: 10px; width: 100%; }
+            main { margin-left: 0; width: 100%; padding: 20px; box-sizing: border-box; }
+            .admin-stats-grid { grid-template-columns: 1fr 1fr; }
+            #admin-panel { padding: 15px; width: 95%; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Success Modal -->
+<div id="success-modal">
+    <div class="modal-content">
+        <div class="icon-box success-icon">✔</div>
+        <h2 style="color: var(--dark); margin: 10px 0;">Submitted!</h2>
+        <p style="color: var(--secondary); margin-bottom: 25px;">Your message has been sent to the admin successfully.</p>
+        <button onclick="closeSuccessModal()" style="width: 100%;">Continue</button>
+    </div>
+</div>
+
+<!-- Failed Modal -->
+<div id="failed-modal">
+    <div class="modal-content">
+        <div class="icon-box failed-icon">✖</div>
+        <h2 style="color: var(--danger); margin: 10px 0;">Failed!</h2>
+        <p id="failed-msg" style="color: var(--secondary); margin-bottom: 25px;">Please fill up all requirements before submitting.</p>
+        <button onclick="closeFailedModal()" style="width: 100%; background: var(--danger);">Try Again</button>
+    </div>
+</div>
+
+<!-- Announcement Modal -->
+<div id="announcement-modal">
+    <div class="modal-content" style="text-align: left;">
+        <h2 id="modal-ann-title" style="color: var(--primary); margin-top: 0;"></h2>
+        <hr>
+        <div id="modal-ann-body" style="line-height: 1.6; color: #334155; min-height: 100px;"></div>
+        <p id="modal-ann-date" style="color: gray; font-size: 0.9rem;"></p>
+        <button onclick="closeAnnModal()" style="width: 100%; background: var(--secondary);">Close</button>
+    </div>
+</div>
+
+<nav>
+    <h2>Barangay Connect</h2>
+    <ul>
+        <li onclick="showSection('home')" id="li-home" class="active">Dashboard</li>
+        <li onclick="showSection('request')" id="li-request">Request Help</li>
+        <li onclick="showSection('volunteer')" id="li-volunteer">Volunteer Sign-up</li>
+        <li onclick="showSection('report')" id="li-report">Report Problems</li>
+        <li onclick="showSection('announcements')" id="li-announcements">Announcements</li>
+        <li onclick="openAdminLogin()" class="admin-btn">Admin Login</li>
+    </ul>
+</nav>
+
+<div id="admin-overlay">
+    <div class="admin-box" id="login-form-box">
+        <h2 style="color: var(--dark)">Admin Access</h2>
+        <div class="form-group" style="text-align: left;">
+            <label>Username</label>
+            <input type="text" id="admin-user" placeholder="Enter username">
+        </div>
+        <div class="form-group" style="text-align: left;">
+            <label>Password</label>
+            <input type="password" id="admin-pass" placeholder="Enter password">
+        </div>
+        <button onclick="checkLogin()" style="width: 100%;">Login</button>
+        <button onclick="closeAdmin()" style="background: var(--secondary); margin-top: 10px; width: 100%;">Cancel</button>
+    </div>
+
+    <div id="admin-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1 style="margin:0; font-size: 1.2rem;">Admin Control Center</h1>
+            <button onclick="closeAdmin()" style="background: var(--danger);">Logout</button>
+        </div>
+        <hr>
+        <div class="admin-stats-grid">
+            <div class="stat-card bg-blue active-filter" onclick="loadDashboard('all')">
+                <h3>Total</h3>
+                <p id="stat-total">0</p>
+            </div>
+            <div class="stat-card bg-green" onclick="loadDashboard('volunteer')">
+                <h3>Volunteers</h3>
+                <p id="stat-volunteers">0</p>
+            </div>
+            <div class="stat-card bg-orange" onclick="loadDashboard('help')">
+                <h3>Requests</h3>
+                <p id="stat-help">0</p>
+            </div>
+            <div class="stat-card bg-purple" onclick="loadDashboard('report')">
+                <h3>Reports</h3>
+                <p id="stat-reports">0</p>
+            </div>
+        </div>
+        <div id="admin-stats">
+            <p><strong>System Status:</strong> <span style="color: var(--success)">● Online</span></p>
+            <p id="current-filter-label"><strong>Recent Activity:</strong></p>
+            <div id="admin-activity-list"></div>
+        </div>
+        <br>
+        <button onclick="clearSystemData()" style="background: var(--danger); width: 100%;">Clear All Records</button>
+    </div>
+</div>
+
+<main>
+    <div id="home" class="section active">
+        <h1>Community Overview</h1>
+        <p>Welcome to the Community Assistance and Information System (CAIS).</p>
+        <div id="dashboard-feed">
+            <div class="data-card" style="border-left-color: var(--success); background: #f0fdf4;">
+                <strong>Community Notice:</strong> All submitted reports and requests are now handled privately by the Barangay Administration for your security.
+            </div>
+        </div>
+    </div>
+
+    <div id="request" class="section">
+        <h1>Request Assistance</h1>
+        <div class="form-group"><label>Full Name</label><input type="text" id="req-name" placeholder="Juan Dela Cruz"></div>
+        <div class="form-group"><label>Contact Number</label><input type="tel" id="req-contact" placeholder="0912 345 6789"></div>
+        <div class="form-group"><label>Home Address</label><input type="text" id="req-address" placeholder="Purok, Barangay, City"></div>
+        <div class="form-group">
+            <label>Type of Help</label>
+            <select id="help-type">
+                <optgroup label="Healthcare & Wellness">
+                    <option value="Maternal and Child Health">Maternal and Child Health</option>
+                    <option value="Emergency Medical Response">Emergency Medical Response</option>
+                    <option value="Elderly Care Programs">Elderly Care Programs</option>
+                    <option value="Free Medicine Distribution">Free Medicine Distribution</option>
+                </optgroup>
+                <optgroup label="Social Welfare & Support">
+                    <option value="Financial Assistance (AICS)">Financial Assistance (AICS)</option>
+                    <option value="Livelihood Training">Livelihood Training</option>
+                    <option value="Solo Parent Support">Solo Parent Support</option>
+                    <option value="Feeding Programs">Feeding Programs</option>
+                </optgroup>
+            </select>
+        </div>
+        <div class="form-group"><label>Description</label><textarea id="help-desc" rows="3" placeholder="Describe what you need..."></textarea></div>
+        <button onclick="saveData('help')" style="width: 100%;">Submit Request</button>
+    </div>
+
+    <div id="volunteer" class="section">
+        <h1>Volunteer Registration</h1>
+        <div class="form-group"><label>Full Name</label><input type="text" id="vol-name" placeholder="Juan Dela Cruz"></div>
+        <div class="form-group"><label>Contact Number</label><input type="tel" id="vol-contact" placeholder="0912 345 6789"></div>
+        <div class="form-group"><label>Home Address</label><input type="text" id="vol-address" placeholder="Purok, Barangay, City"></div>
+        <div class="form-group"><label>Skills</label><input type="text" id="vol-skill" placeholder="e.g., Cooking, First Aid, Teaching"></div>
+        <div class="form-group"><label>Services Offered</label><input type="text" id="vol-service" placeholder="e.g., Delivery, Tutoring, Cleaning"></div>
+        <button onclick="saveData('volunteer')" style="width: 100%;">Join as Volunteer</button>
+    </div>
+
+    <div id="report" class="section">
+        <h1>Report Issue</h1>
+        <div class="form-group"><label>Full Name</label><input type="text" id="rep-name" placeholder="Juan Dela Cruz"></div>
+        <div class="form-group"><label>Contact Number</label><input type="tel" id="rep-contact" placeholder="0912 345 6789"></div>
+        <div class="form-group"><label>Home Address</label><input type="text" id="rep-address" placeholder="Purok, Barangay, City"></div>
+        <div class="form-group">
+            <label>Issue Category</label>
+            <select id="issue-cat">
+                <optgroup label="Public Safety & Order">
+                    <option value="Noise Complaint">Noise Complaint</option>
+                    <option value="Illegal Parking">Illegal Parking</option>
+                    <option value="Stray Animals">Stray Animals</option>
+                </optgroup>
+                <optgroup label="Environment & Sanitation">
+                    <option value="Illegal Dumping">Illegal Dumping</option>
+                    <option value="Clogged Drainage">Clogged Drainage</option>
+                </optgroup>
+            </select>
+        </div>
+        <div class="form-group"><label>Details</label><textarea id="issue-desc" rows="3" placeholder="Specify more details..."></textarea></div>
+        <button onclick="saveData('report')" style="width: 100%;">Submit Report</button>
+    </div>
+
+    <div id="announcements" class="section">
+        <h1>Community Announcements</h1>
+        <div id="ann-list">
+            <div class="data-card clickable-card" style="border-left-color: #f59e0b;" onclick="viewAnnouncement('Flood Alert', 'Stay indoors due to heavy rain.', 'Today at 9:00 AM')">
+                <span class="tag" style="background:#f59e0b">URGENT</span>
+                <strong>Flood Alert:</strong> Stay indoors due to heavy rain...
+                <br><small>Posted: Today (Click to view)</small>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    /* ALL ORIGINAL FUNCTIONS MAINTAINED[cite: 1] */
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('nav li').forEach(l => l.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('li-' + id).classList.add('active');
+        if(id === 'home') loadDashboard();
+    }
+
+    function viewAnnouncement(title, body, date) {
+        document.getElementById('modal-ann-title').innerText = title;
+        document.getElementById('modal-ann-body').innerHTML = body;
+        document.getElementById('modal-ann-date').innerText = "Posted: " + date;
+        document.getElementById('announcement-modal').style.display = 'flex';
+    }
+
+    function closeAnnModal() { document.getElementById('announcement-modal').style.display = 'none'; }
+    
+    function openAdminLogin() { 
+        document.getElementById('admin-overlay').style.display = 'flex'; 
+        document.getElementById('login-form-box').style.display = 'block'; 
+        document.getElementById('admin-panel').style.display = 'none'; 
+    }
+    
+    function closeAdmin() { document.getElementById('admin-overlay').style.display = 'none'; }
+
+    function checkLogin() {
+        const u = document.getElementById('admin-user').value;
+        const p = document.getElementById('admin-pass').value;
+        if(u === "admin" && p === "password") {
+            document.getElementById('login-form-box').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'block';
+            loadDashboard();
+        } else { openFailedModal("Invalid Username or Password!"); }
+    }
+
+    function openSuccessModal() { document.getElementById('success-modal').style.display = 'flex'; }
+    function closeSuccessModal() { document.getElementById('success-modal').style.display = 'none'; showSection('home'); }
+    
+    function openFailedModal(msg) { 
+        document.getElementById('failed-msg').innerText = msg || "Please fill up all requirements before submitting.";
+        document.getElementById('failed-modal').style.display = 'flex'; 
+    }
+    function closeFailedModal() { document.getElementById('failed-modal').style.display = 'none'; }
+
+    function saveData(type) {
+        let data = JSON.parse(localStorage.getItem('cais_data')) || [];
+        let entry = { type: type, timestamp: new Date().toLocaleString() };
+
+        if(type === 'help') {
+            const name = document.getElementById('req-name').value;
+            const contact = document.getElementById('req-contact').value;
+            const address = document.getElementById('req-address').value;
+            const desc = document.getElementById('help-desc').value;
+            if(!name || !contact || !address || !desc) { openFailedModal(); return; }
+            entry.title = "Help Request from: " + name;
+            entry.info = `<strong>Contact:</strong> ${contact}<br><strong>Address:</strong> ${address}<br><strong>Type:</strong> ${document.getElementById('help-type').value}<br><strong>Details:</strong> ${desc}`;
+            document.getElementById('req-name').value = ''; document.getElementById('req-contact').value = '';
+            document.getElementById('req-address').value = ''; document.getElementById('help-desc').value = '';
+        } else if(type === 'volunteer') {
+            const name = document.getElementById('vol-name').value;
+            const contact = document.getElementById('vol-contact').value;
+            const address = document.getElementById('vol-address').value;
+            const skill = document.getElementById('vol-skill').value;
+            const service = document.getElementById('vol-service').value;
+            if(!name || !contact || !address || !skill || !service) { openFailedModal(); return; }
+            entry.title = "New Volunteer: " + name;
+            entry.info = `<strong>Contact:</strong> ${contact}<br><strong>Address:</strong> ${address}<br><strong>Skills:</strong> ${skill}<br><strong>Services:</strong> ${service}`;
+            document.getElementById('vol-name').value = ''; document.getElementById('vol-contact').value = '';
+            document.getElementById('vol-address').value = ''; document.getElementById('vol-skill').value = '';
+            document.getElementById('vol-service').value = '';
+        } else if(type === 'report') {
+            const name = document.getElementById('rep-name').value;
+            const contact = document.getElementById('rep-contact').value;
+            const address = document.getElementById('rep-address').value;
+            const desc = document.getElementById('issue-desc').value;
+            if(!name || !contact || !address || !desc) { openFailedModal(); return; }
+            entry.title = "Report from: " + name;
+            entry.info = `<strong>Contact:</strong> ${contact}<br><strong>Address:</strong> ${address}<br><strong>Category:</strong> ${document.getElementById('issue-cat').value}<br><strong>Details:</strong> ${desc}`;
+            document.getElementById('rep-name').value = ''; document.getElementById('rep-contact').value = '';
+            document.getElementById('rep-address').value = ''; document.getElementById('issue-desc').value = '';
+        }
+
+        data.unshift(entry);
+        localStorage.setItem('cais_data', JSON.stringify(data));
+        openSuccessModal();
+    }
+
+    function loadDashboard(filter = 'all') {
+        const data = JSON.parse(localStorage.getItem('cais_data')) || [];
+        const adminList = document.getElementById('admin-activity-list');
+        
+        let countVol = 0;
+        let countHelp = 0;
+        let countRep = 0;
+
+        if(!adminList) return;
+
+        data.forEach(item => {
+            if(item.type === 'volunteer') countVol++;
+            if(item.type === 'help') countHelp++;
+            if(item.type === 'report') countRep++;
+        });
+
+        document.getElementById('stat-total').innerText = data.length;
+        document.getElementById('stat-volunteers').innerText = countVol;
+        document.getElementById('stat-help').innerText = countHelp;
+        document.getElementById('stat-reports').innerText = countRep;
+
+        adminList.innerHTML = '';
+        const filteredData = (filter === 'all') ? data : data.filter(item => item.type === filter);
+        
+        const label = document.getElementById('current-filter-label');
+        label.innerHTML = `<strong>Showing: ${filter === 'all' ? 'All Submissions' : filter.charAt(0).toUpperCase() + filter.slice(1) + 's'}</strong>`;
+
+        if (filteredData.length === 0) {
+            adminList.innerHTML = `<p class="empty-msg">No ${filter === 'all' ? '' : filter} records found.</p>`;
+        } else {
+            filteredData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'data-card clickable-card';
+                let typeClass = (item.type === 'help') ? 'tag-help' : (item.type === 'volunteer') ? 'tag-volunteer' : 'tag-report';
+                let previewInfo = item.info.substring(0, 80) + (item.info.length > 80 ? '...' : '');
+                card.innerHTML = `<span class="tag ${typeClass}">${item.type.toUpperCase()}</span><strong>${item.title}</strong><br>${previewInfo}<br><small style="color:gray">${item.timestamp} (Click to expand)</small>`;
+                card.onclick = function() { viewAnnouncement(item.title, item.info, item.timestamp); };
+                adminList.appendChild(card);
+            });
+        }
+
+        document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active-filter'));
+        if(filter === 'all') document.querySelector('.bg-blue').classList.add('active-filter');
+        if(filter === 'volunteer') document.querySelector('.bg-green').classList.add('active-filter');
+        if(filter === 'help') document.querySelector('.bg-orange').classList.add('active-filter');
+        if(filter === 'report') document.querySelector('.bg-purple').classList.add('active-filter');
+    }
+
+    function clearSystemData() {
+        if(confirm("Are you sure you want to delete all community records?")) {
+            localStorage.removeItem('cais_data');
+            loadDashboard();
+            alert("All records cleared.");
+        }
+    }
+    
+    loadDashboard();
+</script>
+</body>
+</html>
